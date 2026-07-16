@@ -1,0 +1,33 @@
+# --- Run-specific inputs (large raw VODs — never commit these) ---
+source/*.mp4
+source/*.mov
+source/*.mkv
+source/*.webm
+source/*.m4v
+
+# --- Generated transcripts (whisper output + extracted audio) ---
+transcripts/*.srt
+transcripts/*.json
+transcripts/*.txt
+transcripts/*.vtt
+transcripts/*.wav
+
+# --- Generated clip-review files ---
+review/*.md
+
+# --- Rendered clips (final output) ---
+clips/*.mp4
+
+# --- Whisper models (hundreds of MB) ---
+*.bin
+models/
+
+# --- macOS ---
+.DS_Store
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
