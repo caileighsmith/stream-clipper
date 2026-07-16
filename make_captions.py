@@ -41,6 +41,10 @@ SPECIAL_TOKEN_RE = re.compile(r"^\[_.*\]$")
 CHUNK_MIN_WORDS = 2
 CHUNK_MAX_WORDS = 4
 CHUNK_MAX_DURATION_MS = 2200  # don't let a chunk sit on screen too long
+MIN_DISPLAY_MS = 700          # floor so short captions stay readable
+
+# A chunk never spans two sentences: these end one.
+SENTENCE_ENDINGS = (".", "!", "?", "…")
 
 # ASS styling — tweak freely
 ASS_STYLE = (
@@ -92,26 +96,48 @@ def load_words(json_path):
     return words
 
 
+def split_sentences(words):
+    """Group the word stream into sentences so a caption never straddles a
+    sentence boundary. A sentence ends on . ! ? … — even a one-word sentence
+    ("Sure.") stands on its own instead of gluing onto the next line."""
+    sentences = []
+    current = []
+    for w in words:
+        current.append(w)
+        if w["text"].endswith(SENTENCE_ENDINGS):
+            sentences.append(current)
+            current = []
+    if current:  # trailing run-on with no terminal punctuation
+        sentences.append(current)
+    return sentences
+
+
+def chunk_sentence(words):
+    """Split one sentence into 2-4 word phrases. Avoids leaving a lonely
+    trailing word (5 words -> 3+2, not 4+1) and respects the max duration."""
+    chunks = []
+    i, n = 0, len(words)
+    while i < n:
+        remaining = n - i
+        take = min(CHUNK_MAX_WORDS, remaining)
+        # avoid orphaning a single word at the end of the sentence
+        if remaining - take == 1 and take > CHUNK_MIN_WORDS:
+            take -= 1
+        # shrink if the phrase would sit on screen too long — but a mere pause
+        # shouldn't fragment speech into 1-word flashes, so don't shrink below
+        # CHUNK_MIN_WORDS here. Genuinely short *sentences* still stand alone
+        # because split_sentences already isolated them.
+        while take > CHUNK_MIN_WORDS and words[i + take - 1]["t1"] - words[i]["t0"] > CHUNK_MAX_DURATION_MS:
+            take -= 1
+        chunks.append(words[i:i + take])
+        i += take
+    return chunks
+
+
 def chunk_words(words):
     chunks = []
-    current = []
-    start_ms = None
-
-    for w in words:
-        if not current:
-            start_ms = w["t0"]
-        current.append(w)
-
-        duration = w["t1"] - start_ms
-        if len(current) >= CHUNK_MAX_WORDS or duration >= CHUNK_MAX_DURATION_MS:
-            chunks.append(current)
-            current = []
-        elif len(current) >= CHUNK_MIN_WORDS and w["text"].endswith((".", "!", "?")):
-            chunks.append(current)
-            current = []
-
-    if current:
-        chunks.append(current)
+    for sentence in split_sentences(words):
+        chunks.extend(chunk_sentence(sentence))
     return chunks
 
 
@@ -129,9 +155,17 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
     lines = [header]
-    for chunk in chunks:
-        start = ms_to_ass_time(chunk[0]["t0"])
-        end = ms_to_ass_time(chunk[-1]["t1"])
+    for idx, chunk in enumerate(chunks):
+        start_ms = chunk[0]["t0"]
+        end_ms = chunk[-1]["t1"]
+        # hold short captions on screen long enough to read, but never overlap
+        # the next caption's start
+        if end_ms - start_ms < MIN_DISPLAY_MS:
+            end_ms = start_ms + MIN_DISPLAY_MS
+            if idx + 1 < len(chunks):
+                end_ms = min(end_ms, chunks[idx + 1][0]["t0"])
+        start = ms_to_ass_time(start_ms)
+        end = ms_to_ass_time(end_ms)
         text = " ".join(w["text"] for w in chunk).upper()
         lines.append(f"Dialogue: 0,{start},{end},Caption,,0,0,0,,{text}\n")
 
