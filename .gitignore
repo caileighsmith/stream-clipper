@@ -5,6 +5,13 @@ source/*.mkv
 source/*.webm
 source/*.m4v
 
+# --- yt-dlp download intermediates ---
+*.part
+*.ytdl
+*.part-*
+source/*.ts
+source/*.m3u8
+
 # --- Generated transcripts (whisper output + extracted audio) ---
 transcripts/*.srt
 transcripts/*.json

@@ -8,6 +8,8 @@ moments, and cuts/formats short clips for TikTok (@litsocialmoments).
 - Platform: macOS (Apple Silicon)
 - Transcription: whisper.cpp (Metal-accelerated, local, free — no API calls)
 - Video processing: FFmpeg (with videotoolbox hardware encoding)
+- Input (optional): yt-dlp can download a Twitch/Kick VOD into /source via
+  `fetch.sh`. Manually dropping an mp4 into /source works too — both are fine.
 - No cloud APIs should be used for transcription or clipping unless I
   explicitly ask for one. Keep this pipeline 100% local/free.
 
@@ -22,6 +24,13 @@ moments, and cuts/formats short clips for TikTok (@litsocialmoments).
 ```
 
 ## Workflow (do these as separate steps, don't skip ahead)
+
+0. **(Optional) Get the source video**
+   The source mp4 can arrive two ways — both are fine:
+   - I drop an mp4 into /source myself, OR
+   - Download it by URL:  `bash fetch.sh <URL> [name] [section]`
+     (Twitch is reliable; Kick may need IMPERSONATE=1 — see fetch.sh.)
+   Either way, proceed once there's exactly one video in /source.
 
 1. **Transcribe**
    Run whisper.cpp (medium model) on the source file in /source, output

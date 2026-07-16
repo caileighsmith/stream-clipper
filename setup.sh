@@ -16,6 +16,9 @@ brew install ffmpeg
 echo "=== Installing whisper.cpp ==="
 brew install whisper-cpp
 
+echo "=== Installing yt-dlp (optional — for downloading VODs by URL) ==="
+brew install yt-dlp
+
 echo "=== Creating project folders ==="
 mkdir -p source transcripts review clips
 
@@ -25,7 +28,8 @@ whisper-cpp --help > /dev/null 2>&1 && echo "whisper-cpp installed OK"
 
 echo ""
 echo "Setup complete. Next steps:"
-echo "1. Drop your source mp4 into the /source folder"
+echo "1. Add a source VOD to /source — drop an mp4 in yourself, or download"
+echo "   one by URL:  bash fetch.sh <twitch-or-kick-url>"
 echo "2. Download a whisper.cpp model, e.g.:"
 echo "   bash \$(brew --prefix whisper-cpp)/share/whisper-cpp/models/download-ggml-model.sh medium"
 echo "3. Open this folder in Claude Code and say:"

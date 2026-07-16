@@ -34,6 +34,8 @@ To run it, drop an mp4 in `source/` and tell Claude Code:
 - [Homebrew](https://brew.sh)
 - **FFmpeg built with libass** (for burning `.ass` captions — see note below)
 - whisper.cpp (`whisper-cli`) + a whisper model (medium recommended)
+- (optional) [yt-dlp](https://github.com/yt-dlp/yt-dlp) — to download a VOD by
+  URL instead of supplying your own mp4
 
 ### ⚠️ FFmpeg must have the `ass` filter (libass)
 
@@ -70,6 +72,33 @@ download a whisper model, e.g. the medium model:
 bash "$(brew --prefix whisper-cpp)/share/whisper-cpp/models/download-ggml-model.sh" medium
 ```
 
+## Fetching a VOD by URL (optional)
+
+Instead of manually placing an mp4 in `source/`, you can download a Twitch or
+Kick VOD (anything yt-dlp supports) with the helper script:
+
+```bash
+bash fetch.sh <URL> [output_name] [section]
+```
+
+```bash
+# whole VOD -> source/input.mp4
+bash fetch.sh https://www.twitch.tv/videos/123456789
+
+# name it, so it lands at source/speed.mp4
+bash fetch.sh https://www.twitch.tv/videos/123456789 speed
+
+# only download a time window (great for multi-hour VODs)
+bash fetch.sh https://www.twitch.tv/videos/123456789 speed "*1:20:00-1:50:00"
+```
+
+- **Twitch** is reliable. **Kick** sits behind Cloudflare and may need browser
+  impersonation — if a download fails, `pip install curl_cffi` and re-run with
+  `IMPERSONATE=1 bash fetch.sh <kick-url>`.
+- The manual method (drop your own mp4 in `source/`) still works exactly the
+  same — this is purely optional.
+- Downloaded files land in `source/` and are git-ignored like any other input.
+
 ## Folder structure
 
 ```
@@ -81,6 +110,7 @@ bash "$(brew --prefix whisper-cpp)/share/whisper-cpp/models/download-ggml-model.
   CLAUDE.md          <- workflow + rules for Claude Code
   make_captions.py   <- whisper JSON -> chunked .ass captions
   extract_segment.py <- slice word-level tokens for one clip's time range
+  fetch.sh           <- (optional) download a VOD by URL into source/
   setup.sh
 ```
 
@@ -98,6 +128,8 @@ bash "$(brew --prefix whisper-cpp)/share/whisper-cpp/models/download-ggml-model.
 - **`extract_segment.py`** — slices the word-level tokens for a single clip's
   time range out of the full transcript JSON and rebases their timestamps to the
   clip start, so captions line up when burned onto a cut clip.
+- **`fetch.sh`** *(optional)* — downloads a Twitch/Kick (or any yt-dlp-supported)
+  VOD by URL straight into `source/`. See "Fetching a VOD by URL" above.
 
 ## Format / output
 
