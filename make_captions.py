@@ -42,6 +42,7 @@ CHUNK_MIN_WORDS = 2
 CHUNK_MAX_WORDS = 4
 CHUNK_MAX_DURATION_MS = 2200  # don't let a chunk sit on screen too long
 MIN_DISPLAY_MS = 700          # floor so short captions stay readable
+PAUSE_BOUNDARY_MS = 600       # a silent gap this long also ends a sentence
 
 # A chunk never spans two sentences: these end one.
 SENTENCE_ENDINGS = (".", "!", "?", "…")
@@ -98,12 +99,20 @@ def load_words(json_path):
 
 def split_sentences(words):
     """Group the word stream into sentences so a caption never straddles a
-    sentence boundary. A sentence ends on . ! ? … — even a one-word sentence
-    ("Sure.") stands on its own instead of gluing onto the next line."""
+    sentence boundary. A boundary is either terminal punctuation (. ! ? …) OR a
+    clear pause between words: on fast/under-punctuated IRL audio whisper often
+    drops periods, so a silent gap is frequently the only sentence signal we get
+    — and it's exactly where a viewer expects the caption to turn over. Even a
+    one-word sentence ("Sure.") stands on its own instead of gluing on."""
     sentences = []
     current = []
+    prev_end = None
     for w in words:
+        if current and prev_end is not None and w["t0"] - prev_end >= PAUSE_BOUNDARY_MS:
+            sentences.append(current)
+            current = []
         current.append(w)
+        prev_end = w["t1"]
         if w["text"].endswith(SENTENCE_ENDINGS):
             sentences.append(current)
             current = []

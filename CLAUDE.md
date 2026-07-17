@@ -33,8 +33,12 @@ moments, and cuts/formats short clips for TikTok (@litsocialmoments).
    Either way, proceed once there's exactly one video in /source.
 
 1. **Transcribe**
-   Run whisper.cpp (medium model) on the source file in /source, output
-   timestamped transcript (SRT + JSON) into /transcripts.
+   - First extract + clean the audio to 16kHz mono WAV (denoise / voice-band
+     filtering improves punctuation and cuts hallucination loops):
+     `ffmpeg -i <src> -af "highpass=f=80,lowpass=f=7900,afftdn=nf=-20,loudnorm=I=-16:TP=-1.5:LRA=11" -ar 16000 -ac 1 -c:a pcm_s16le out_16k.wav`
+   - Run whisper.cpp **large-v3** on that WAV with the anti-loop flags
+     **`-mc 0 -sns`** (large-v3 loops badly without them), plus `-ojf` for
+     word-level timestamps. Output SRT + full JSON into /transcripts.
 
 2. **Analyze for clip-worthy moments**
    Read the transcript and flag candidate moments based on the criteria
@@ -106,8 +110,11 @@ Avoid moments that:
    make_captions.py rather than hand-patching individual lines.
 
 ## Cost/performance notes
-- whisper.cpp medium model is the default — don't upgrade to large-v3
-  unless transcript accuracy is clearly a problem
+- whisper.cpp large-v3 is the model to use — its better punctuation feeds the
+  sentence-aware caption chunking. It MUST run with `-mc 0 -sns` or it falls
+  into repetition/hallucination loops on noisy IRL audio (learned the hard way:
+  without them a whole VOD looped one phrase from 5min to the end). medium is a
+  faster fallback if large-v3 is too slow on a long VOD.
 - Always use videotoolbox for encoding, not software encoding, to keep
   render times reasonable on this machine
 - For long VODs (2hrs+), transcription will take a while — that's fine,

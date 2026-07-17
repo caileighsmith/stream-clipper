@@ -33,7 +33,8 @@ To run it, drop an mp4 in `source/` and tell Claude Code:
 - macOS on Apple Silicon
 - [Homebrew](https://brew.sh)
 - **FFmpeg built with libass** (for burning `.ass` captions — see note below)
-- whisper.cpp (`whisper-cli`) + a whisper model (medium recommended)
+- whisper.cpp (`whisper-cli`) + the **large-v3** model (better punctuation →
+  better captions; run it with `-mc 0 -sns`, see notes)
 - (optional) [yt-dlp](https://github.com/yt-dlp/yt-dlp) — to download a VOD by
   URL instead of supplying your own mp4
 
@@ -144,7 +145,11 @@ bash fetch.sh https://www.twitch.tv/videos/123456789 speed "*1:20:00-1:50:00"
   VODs that are already vertical, a different resolution, or where the subject
   roams will need the crop adjusted per source (check with `ffprobe` first).
 - **Whisper hallucination loops** — over noisy sections (loud crowds, music) the
-  transcript can loop a single phrase many times. These are audio artifacts, not
-  real speech, and should be skipped during analysis.
+  transcript can loop a single phrase many times. large-v3 is especially prone
+  to this, so it's run with `-mc 0 -sns` (no context carry-over + suppress
+  non-speech tokens), which prevents the loops. Cleaning the audio first
+  (denoise / voice-band filter, see the Transcribe step) also helps. Any loops
+  that still slip through are audio artifacts, not real speech — skip them
+  during analysis.
 - Keep it local/free: no cloud transcription or clipping APIs unless you
   explicitly add one.
