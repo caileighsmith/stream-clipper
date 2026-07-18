@@ -39,7 +39,10 @@ fi
 mkdir -p source
 
 # Prefer best video+audio, remux to mp4 so the rest of the pipeline just works.
-ARGS=( -f "bv*+ba/b" --merge-output-format mp4 -o "source/${NAME}.%(ext)s" )
+# The retry flags ride through flaky HLS CDNs (Kick/IRL VODs drop fragments and
+# hit transient DNS blips — the defaults give up after 10 and truncate the file).
+ARGS=( -f "bv*+ba/b" --merge-output-format mp4 -o "source/${NAME}.%(ext)s"
+       --fragment-retries 50 --retries 20 --retry-sleep 3 )
 [ -n "$SECTION" ] && ARGS+=( --download-sections "$SECTION" )
 [ "$IMPERSONATE" = "1" ] && ARGS+=( --impersonate chrome )
 
